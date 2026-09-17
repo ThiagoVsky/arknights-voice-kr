@@ -1,0 +1,66 @@
+name: Update assets
+
+# Sincroniza o grupo voice-kr a partir do servidor EN do jogo.
+# Este repositorio guarda um unico grupo; a carga fica em voice-kr/ na raiz.
+#
+# O download usa as APIs do arkprts (resolucao de versao/dominio e mapeamento de nome
+# de bundle) e a extracao usa UnityPy com o decodificador LZ4AK que o arkprts registra.
+# O estado incremental vive em .state/voice-kr.json: so bundles novos ou com hash
+# diferente sao baixados e extraidos, entao runs repetidos sao baratos.
+
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Reprocessar todos os bundles, ignorando o estado"
+        type: boolean
+        default: false
+  schedule:
+    - cron: '23 4 * * *'
+
+concurrency:
+  group: update-assets-voice-kr
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Update voice-kr
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GROUP: voice-kr
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: python -m pip install "arkprts[all]" lameenc
+
+      - name: Sync assets
+        run: |
+          EXTRA=""
+          if [ "${{ inputs.force }}" = "true" ]; then EXTRA="--force"; fi
+          python tools/assets_sync.py --groups "$GROUP" --out . --state .state \
+            --concurrency 4 --audio-format mp3 $EXTRA
+
+      - name: Verify
+        run: python tools/assets_sync.py --verify --out . | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A "$GROUP"
+          if git diff --cached --quiet; then
+            echo "sem mudancas" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git commit -m "assets update $GROUP $(date -u +%Y-%m-%d)"
+          git push
