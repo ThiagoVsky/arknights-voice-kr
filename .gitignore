@@ -1,4 +1,6 @@
-.state/
+# .state/ NAO e ignorado de proposito: o estado incremental precisa ser versionado para
+# que a execucao seguinte saiba o que ja foi processado.
 __pycache__/
 *.pyc
+*.tmp
 .venv/

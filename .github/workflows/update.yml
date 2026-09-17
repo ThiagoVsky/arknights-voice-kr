@@ -1,12 +1,13 @@
 name: Update assets
 
 # Sincroniza o grupo voice-kr a partir do servidor EN do jogo.
-# Este repositorio guarda um unico grupo; a carga fica em voice-kr/ na raiz.
+# O payload deste repositorio fica na raiz, escrito pelo modo --flat do sincronizador.
 #
 # O download usa as APIs do arkprts (resolucao de versao/dominio e mapeamento de nome
 # de bundle) e a extracao usa UnityPy com o decodificador LZ4AK que o arkprts registra.
-# O estado incremental vive em .state/voice-kr.json: so bundles novos ou com hash
-# diferente sao baixados e extraidos, entao runs repetidos sao baratos.
+# O estado incremental vive em .state/voice-kr.json e E versionado: sem ele o run
+# seguinte rebaixaria tudo de novo. So bundles novos ou com hash diferente sao
+# processados, entao runs repetidos sao baratos.
 
 on:
   workflow_dispatch:
@@ -58,7 +59,9 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A "$GROUP"
+          # o payload fica na raiz (--flat), e .state/ tambem e versionado para
+          # preservar o estado incremental entre execucoes
+          git add -A .
           if git diff --cached --quiet; then
             echo "sem mudancas" >> "$GITHUB_STEP_SUMMARY"
             exit 0
