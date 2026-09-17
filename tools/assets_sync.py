@@ -337,7 +337,7 @@ async def run(args: argparse.Namespace) -> int:
             summary.append((group, 0, 0, 0.0))
             continue
 
-        out_dir = out_root / group
+        out_dir = out_root if args.flat else out_root / group
         out_dir.mkdir(parents=True, exist_ok=True)
         spec = {
             "out_dir": out_dir,
@@ -445,15 +445,24 @@ async def run(args: argparse.Namespace) -> int:
     return 0
 
 
-def verify(out_root: pathlib.Path) -> int:
+def verify(out_root: pathlib.Path, flat: bool = False) -> int:
     """Relatorio de tamanho e contagem por grupo e por extensao."""
     if not out_root.exists():
         print(f"{out_root} nao existe")
         return 1
     SKIP = {".git", ".state", ".github", "tools", "scripts", "node_modules", ".venv-assets"}
+    if flat:
+        # repositorio dedicado: o payload esta na propria raiz
+        units = [out_root]
+    else:
+        units = sorted(p for p in out_root.iterdir() if p.is_dir() and p.name not in SKIP)
     grand = 0
-    for group_dir in sorted(p for p in out_root.iterdir() if p.is_dir() and p.name not in SKIP):
-        files = [f for f in group_dir.rglob("*") if f.is_file()]
+    for group_dir in units:
+        files = [
+            f
+            for f in group_dir.rglob("*")
+            if f.is_file() and not (SKIP & set(f.relative_to(group_dir).parts))
+        ]
         size = sum(f.stat().st_size for f in files)
         grand += size
         exts: dict[str, list[int]] = {}
@@ -488,13 +497,19 @@ def main() -> int:
         help="mp3 reencoda o WAV decodificado (padrao, ~10x menor); original mantem o que o UnityPy devolveu",
     )
     parser.add_argument("--log-every", type=int, default=25)
+    parser.add_argument(
+        "--flat",
+        action="store_true",
+        help="escreve o conteudo do grupo direto em --out, sem a subpasta com o nome do grupo "
+        "(usado nos repositorios dedicados, onde o payload fica na raiz)",
+    )
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--refresh-manifest", action="store_true")
     parser.add_argument("--verify", action="store_true")
     args = parser.parse_args()
 
     if args.verify:
-        return verify(pathlib.Path(args.out))
+        return verify(pathlib.Path(args.out), flat=args.flat)
     try:
         return asyncio.run(run(args))
     except KeyboardInterrupt:

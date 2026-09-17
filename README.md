@@ -5,7 +5,7 @@ generated and refreshed by machine; do not edit its contents by hand.
 
 ## What is here
 
-Source: `audio/sound_beta_2/voice_kr/** on the EN game server`.
+Source: `audio/sound_beta_2/voice_kr/**` on the EN game server.
 
 One directory per voice pack. Operator packs are `char_<operator_id>/`, holding that operator's clips as `cn_001.mp3`, `cn_024.mp3` and so on. Non-operator packs are `extra_<n>/`.
 
@@ -27,8 +27,8 @@ Run it locally:
 
 ```bash
 python -m pip install "arkprts[all]" lameenc
-python tools/assets_sync.py --out . --state .state
-python tools/assets_sync.py --verify --out .
+python tools/assets_sync.py --out . --flat --state .state
+python tools/assets_sync.py --verify --out . --flat
 ```
 
 `tools/assets_sync.py` in this repository is a self-contained copy whose default group is

@@ -47,11 +47,12 @@ jobs:
         run: |
           EXTRA=""
           if [ "${{ inputs.force }}" = "true" ]; then EXTRA="--force"; fi
-          python tools/assets_sync.py --groups "$GROUP" --out . --state .state \
+          # --flat: o payload deste repositorio fica na raiz, sem subpasta com o nome do grupo
+          python tools/assets_sync.py --groups "$GROUP" --out . --flat --state .state \
             --concurrency 4 --audio-format mp3 $EXTRA
 
       - name: Verify
-        run: python tools/assets_sync.py --verify --out . | tee -a "$GITHUB_STEP_SUMMARY"
+        run: python tools/assets_sync.py --verify --out . --flat | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Commit and push
         run: |
